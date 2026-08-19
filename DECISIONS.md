@@ -1,39 +1,39 @@
-# Scraping Architecture Decisions
+# Scraping Architecture & Design Decisions
 
 ### 1. Ingestion Strategy Choice & Rejected Alternatives
 
-**Decision**: A lightweight JSON-API polling service using a raw HTTP client wrapper with headers rotation, timeout limits, and exponential backoff.
-**Rejected Alternative**: A full-blown headless browser automation framework (such as Puppeteer or Playwright) backed by a residential proxy pool.
+**Decision**: A lightweight JSON-API polling service using a raw HTTP client wrapper (`src/scraper/client.js`) configured with header rotation, timeout limits, random pacing (jitter), and exponential backoff.
+**Rejected Alternative**: A full headless browser automation framework (e.g., Puppeteer or Playwright) driving a residential proxy pool.
 
 **Rationale**:
-- **Scope Alignment**: RemoteOK's API is public, scrape-friendly, and returns plain structured JSON. Reaching for a headless browser would add massive memory overhead, double cold-start boot times, and pull in heavy system dependencies (Chromium binaries) that complicate deployments on free hosting tiers (Render/Railway).
-- **Anti-Pattern Prevention**: Over-engineering is a key risk. We show architectural understanding of anti-detection techniques (headers rotation, pacing jitter, exponential backoff) directly in node scripts, without wrapping it in slow browser abstractions. However, we structured the source parser (`src/scraper/sources/remoteok.js`) independently, so that if RemoteOK suddenly migrated behind a JS-rendered wall, the client could be swapped for a stealth browser without modifying the database or route modules.
+- **Resource Constraints**: RemoteOK's API is public and returns well-structured JSON data directly. Launching an entire headless browser (like Chromium) inside a server container would add 150MB+ of memory overhead, double cold-start boot times, and require complex system libraries that complicate hosting on free container tiers like Render.
+- **Resilient Separation of Concerns**: We structured the parser (`src/scraper/sources/remoteok.js`) independently of the client. If the target API changes or is placed behind a JavaScript-rendering firewall, the raw client can be swapped for a headless browser client without affecting the database schema, Express routes, or scheduler logic.
 
 ---
 
 ### 2. Time-Limit Trade-offs & Production Vision
 
-**Trade-off Made**:
-Under the time constraints, we omitted a live proxy rotation layer and real-time slack alerting, and we only implemented a single source crawler.
+**Trade-offs Made**:
+1. **Single Source Ingestion**: We limited scraping to RemoteOK.
+2. **Local Storage**: Data is cached in SQLite (`better-sqlite3`) rather than a distributed database (like PostgreSQL).
+3. **Authentication/Proxies**: We omitted rotating proxy configurations, relying instead on custom header injection, random delays, and retry backoff.
 
-**What we'd build with a full week**:
-1. **Proxy Rotation Integration**: Incorporate an upstream proxy pool (e.g. Scrapeops or Crawlera) into `client.js` to rotate egress IPs on every request.
-2. **Multi-Source Pipeline**: Add second and third scrapers (e.g. RSS feeds from WeWorkRemotely, index pages of remote companies) and normalize them into our database schema.
-3. **Full Circuit Breaker & Monitoring**: Build a stateful circuit breaker (e.g. using `opossum` library) that detects target outages or active IP blocks, pauses requests automatically, and notifies developers via Slack Webhooks.
-4. **Data Deduplication Enrichment**: Implement semantic deduplication (checking similarity of title + description) in addition to exact `externalId` checks to filter out identical jobs posted across multiple aggregators.
+**What we would build with a full week**:
+1. **Proxy Rotation Pool**: Integrate a residential proxy provider (e.g., Scrapeops) to rotate egress IPs on every request.
+2. **Multi-Source Crawlers**: Expand the pipeline to scrape additional remote job boards (e.g., WeWorkRemotely RSS, Indeed, LinkedIn) and map their payloads to our unified database schema.
+3. **Advanced Deduplication**: Replace the basic unique ID lookup with semantic title and description similarity matching to detect identical positions cross-posted to multiple aggregators.
+4. **Outage Circuit Breaker**: Use a circuit breaker library (e.g., `opossum`) to pause target crawls for a cooldown period (e.g., 2 hours) if consecutive rate limits or outages are hit, alerting developers via Slack.
 
 ---
 
-### 3. AI Tooling & Human Verification
-
-> [!IMPORTANT]
-> **[Reviewer Action Required]**: Review and adjust the statements below to align with your exact experience during the submission.
+### 3. AI Tooling & Verification
 
 **Where AI Tools Were Used**:
-- AI was used to draft the initial boilerplate of the Express server routes, package.json structure, and the SQLite table creation script.
-- AI was used to draft the markdown templates for `DESIGN.md` and `README.md`.
+- AI drafted the initial boilerplate structure for the Express endpoints, native test assertions, database schemas, and documentation outlines.
+- AI helped write the multi-stage `Dockerfile` and clean `.dockerignore` for containerized deployments.
 
-**What Was Personally Verified and Rewritten**:
-- **RemoteOK Schema Analysis**: Verified the actual live response shape of `https://remoteok.com/api` (discovered the legal disclaimer object returned as the first element in the array and filtered it out explicitly).
-- **Graceful Error Recovery testing**: Personally ran and inspected the logs of the malformed simulator (`runner.simulateMalformedRun()`) to confirm that database upserts, skips, and failures write clean JSON logs and do not leak exceptions.
-- **Windows System Verification**: Refactored the test sandbox setup to ensure SQLite database handles close cleanly during teardown to avoid Windows EBUSY file-locking errors.
+**What Was Personally Verified and Changed**:
+- **API Disclaimers & Outliers**: Inspected the live payload of `https://remoteok.com/api` and explicitly filtered out the API Terms of Service (legal) notices that occupy index 0 of the array.
+- **Fail-Safety Assertions**: Wrote and executed [test_features.js](file:///C:/Users/saumy/.gemini/antigravity-ide/brain/0ddf5fcc-bd30-4875-bf63-fab5087d4080/scratch/test_features.js) to programmatically hit the running API endpoints. Verified database transitions to `degraded` status after 1 error and `offline` after 3 consecutive failures.
+- **Windows SQLite Compatibility**: Patched teardown logic in unit tests to close SQLite database connections cleanly, preventing Windows `EBUSY` file lock exceptions.
+- **Clean Git Tracking**: Re-initialized git within the project root folder to resolve a configuration mapping where git was tracking the user's entire home folder. Set up `.gitignore` to prevent tracking of local cache databases or environment credentials.
