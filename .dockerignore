@@ -1,0 +1,33 @@
+# Ignore dependencies
+node_modules/
+
+# Ignore local database cache
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+
+# Ignore local environment files
+.env
+.env.*
+.env.example
+
+# Ignore git and configuration
+.git
+.gitignore
+.dockerignore
+Dockerfile
+render.yaml
+fly.toml
+
+# Ignore documentation & design assets
+README.md
+DESIGN.md
+DECISIONS.md
+
+# Ignore testing suites
+test/
+runner.test.js
+.system_generated/
+logs/
+*.log

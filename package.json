@@ -1,0 +1,21 @@
+{
+  "name": "scraper-service",
+  "version": "1.0.0",
+  "description": "Job Listing Ingestion Pipeline - Acdyon Technologies Challenge",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/runner.test.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.2.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "node-cron": "^3.0.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "Antigravity AI / Saumya",
+  "license": "ISC"
+}

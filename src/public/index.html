@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acdyon Technologies Job Ingestion Console</title>
+  <style>
+    :root {
+      --bg-dark: #090d13;
+      --bg-card: #161b22;
+      --bg-terminal: #010409;
+      --border-color: #30363d;
+      --text-main: #c9d1d9;
+      --text-muted: #8b949e;
+      --accent-blue: #58a6ff;
+      --accent-green: #56d364;
+      --accent-yellow: #e3b341;
+      --accent-red: #f85149;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      line-height: 1.5;
+      padding: 1.5rem;
+    }
+
+    /* Layout structure */
+    .dashboard-container {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 1024px) {
+      .dashboard-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    header {
+      grid-column: 1 / -1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 1rem;
+    }
+
+    header h1 {
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: var(--accent-blue);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    header .pulse-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.85rem;
+      background: rgba(86, 211, 100, 0.1);
+      color: var(--accent-green);
+      padding: 0.25rem 0.6rem;
+      border-radius: 20px;
+      border: 1px solid rgba(86, 211, 100, 0.2);
+    }
+
+    header .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background-color: var(--accent-green);
+      border-radius: 50%;
+      box-shadow: 0 0 0 0 rgba(86, 211, 100, 0.7);
+      animation: pulse 1.6s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(86, 211, 100, 0.7);
+      }
+      70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 6px rgba(86, 211, 100, 0);
+      }
+      100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(86, 211, 100, 0);
+      }
+    }
+
+    /* Sidebar cards */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.25rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .card-title {
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      margin-bottom: 1rem;
+      color: var(--text-muted);
+      border-left: 3px solid var(--accent-blue);
+      padding-left: 0.5rem;
+    }
+
+    /* Health Cards */
+    .source-health-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .health-card {
+      background-color: rgba(1, 4, 9, 0.3);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.9rem;
+    }
+
+    .health-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .health-name {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .health-status {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+    }
+
+    .status-healthy {
+      background-color: rgba(86, 211, 100, 0.15);
+      color: var(--accent-green);
+    }
+
+    .status-degraded {
+      background-color: rgba(227, 179, 65, 0.15);
+      color: var(--accent-yellow);
+    }
+
+    .status-offline {
+      background-color: rgba(248, 81, 73, 0.15);
+      color: var(--accent-red);
+    }
+
+    .status-unknown {
+      background-color: rgba(139, 148, 158, 0.15);
+      color: var(--text-muted);
+    }
+
+    .health-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+    }
+
+    .health-row span:last-child {
+      color: var(--text-main);
+      font-family: monospace;
+    }
+
+    /* Trigger Controls */
+    .action-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .action-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    .btn {
+      width: 100%;
+      background-color: #21262d;
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.6rem 1rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.5rem;
+      transition: background-color 0.2s, border-color 0.2s;
+    }
+
+    .btn:hover:not(:disabled) {
+      background-color: #30363d;
+      border-color: #8b949e;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background-color: rgba(86, 211, 100, 0.15);
+      border-color: rgba(86, 211, 100, 0.3);
+      color: var(--accent-green);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background-color: rgba(86, 211, 100, 0.25);
+      border-color: var(--accent-green);
+    }
+
+    .select-dropdown {
+      width: 100%;
+      background-color: #21262d;
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.55rem;
+      font-size: 0.85rem;
+      margin-bottom: 0.5rem;
+      outline: none;
+    }
+
+    /* Main Area layout */
+    .main-content {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* Console Terminal Box */
+    .console-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .console-header {
+      background-color: #161b22;
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.6rem 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .console-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .console-clear-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .console-clear-btn:hover {
+      color: var(--accent-blue);
+    }
+
+    .console-viewport {
+      background-color: var(--bg-terminal);
+      height: 250px;
+      overflow-y: auto;
+      padding: 0.75rem;
+      font-family: Consolas, "Liberation Mono", Courier, monospace;
+      font-size: 0.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .log-line {
+      white-space: pre-wrap;
+    }
+
+    .log-timestamp {
+      color: var(--text-muted);
+    }
+
+    .log-level-info {
+      color: var(--accent-blue);
+      font-weight: bold;
+    }
+
+    .log-level-warn {
+      color: var(--accent-yellow);
+      font-weight: bold;
+    }
+
+    .log-level-error {
+      color: var(--accent-red);
+      font-weight: bold;
+    }
+
+    .log-message {
+      color: #eaecef;
+    }
+
+    /* History table */
+    .table-responsive {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      text-align: left;
+    }
+
+    th, td {
+      padding: 0.65rem 0.75rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      font-weight: 700;
+      color: var(--text-muted);
+      background-color: rgba(1, 4, 9, 0.2);
+    }
+
+    .status-badge {
+      font-weight: 700;
+      font-size: 0.75rem;
+      padding: 0.15rem 0.35rem;
+      border-radius: 4px;
+    }
+
+    .badge-success {
+      background-color: rgba(86, 211, 100, 0.15);
+      color: var(--accent-green);
+    }
+
+    .badge-failed {
+      background-color: rgba(248, 81, 73, 0.15);
+      color: var(--accent-red);
+    }
+
+    /* Jobs Listings cards */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.75rem 1.25rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .filter-input {
+      flex: 1;
+      background-color: #0d1117;
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .filter-input:focus {
+      border-color: var(--accent-blue);
+    }
+
+    .listings-title-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .listings-count {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .listings-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      max-height: 500px;
+      overflow-y: auto;
+      padding-right: 0.25rem;
+    }
+
+    /* Job Card */
+    .job-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .job-card:hover {
+      transform: translateY(-2px);
+      border-color: #8b949e;
+    }
+
+    .job-main {
+      flex: 1;
+    }
+
+    .job-title-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.25rem;
+    }
+
+    .job-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #ffffff;
+    }
+
+    .job-company {
+      font-weight: 600;
+      color: var(--accent-green);
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .job-description {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .job-meta-row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      font-size: 0.75rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      background-color: #21262d;
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+    }
+
+    .badge-location {
+      color: #ff7b72;
+      background-color: rgba(255, 123, 114, 0.1);
+      border-color: rgba(255, 123, 114, 0.2);
+    }
+
+    .badge-date {
+      color: #f2cc60;
+      background-color: rgba(242, 204, 96, 0.1);
+      border-color: rgba(242, 204, 96, 0.2);
+    }
+
+    .badge-source {
+      color: var(--accent-blue);
+      background-color: rgba(88, 166, 255, 0.1);
+      border-color: rgba(88, 166, 255, 0.2);
+    }
+
+    .job-action {
+      display: flex;
+      align-items: center;
+    }
+
+    .btn-view-job {
+      font-size: 0.8rem;
+      white-space: nowrap;
+      padding: 0.4rem 0.8rem;
+      background-color: #21262d;
+      border: 1px solid var(--border-color);
+      color: var(--accent-blue);
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 600;
+      transition: background-color 0.2s;
+    }
+
+    .btn-view-job:hover {
+      background-color: rgba(88, 166, 255, 0.15);
+      border-color: var(--accent-blue);
+    }
+
+    /* Scrollbars customizing */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-terminal);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #30363d;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #8b949e;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="dashboard-container">
+    <header>
+      <h1>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+        Job Ingestion Pipeline Engine
+      </h1>
+      <div class="pulse-badge">
+        <span class="pulse-dot"></span>
+        Ingestion Daemon Active
+      </div>
+    </header>
+
+    <!-- Left Sidebar -->
+    <div class="sidebar">
+      <!-- Health Panel -->
+      <div class="card">
+        <div class="card-title">Source Health</div>
+        <div class="source-health-wrapper">
+          <!-- Primary API Health -->
+          <div class="health-card" id="health-remoteok">
+            <div class="health-header">
+              <span class="health-name">RemoteOK API</span>
+              <span class="health-status status-unknown" id="status-val-remoteok">UNKNOWN</span>
+            </div>
+            <div class="health-row">
+              <span>Last success:</span>
+              <span id="success-val-remoteok">--</span>
+            </div>
+            <div class="health-row">
+              <span>Last failure:</span>
+              <span id="failure-val-remoteok">--</span>
+            </div>
+            <div class="health-row">
+              <span>Consecutive errors:</span>
+              <span id="errors-val-remoteok">0</span>
+            </div>
+            <div class="health-row">
+              <span>Last HTTP status:</span>
+              <span id="http-val-remoteok">--</span>
+            </div>
+          </div>
+
+          <!-- Sandbox Health -->
+          <div class="health-card" id="health-sandbox">
+            <div class="health-header">
+              <span class="health-name">Sandbox (Mock Source)</span>
+              <span class="health-status status-unknown" id="status-val-sandbox">UNKNOWN</span>
+            </div>
+            <div class="health-row">
+              <span>Last success:</span>
+              <span id="success-val-sandbox">--</span>
+            </div>
+            <div class="health-row">
+              <span>Last failure:</span>
+              <span id="failure-val-sandbox">--</span>
+            </div>
+            <div class="health-row">
+              <span>Consecutive errors:</span>
+              <span id="errors-val-sandbox">0</span>
+            </div>
+            <div class="health-row">
+              <span>Last HTTP status:</span>
+              <span id="http-val-sandbox">--</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trigger Ingestion Panel -->
+      <div class="card">
+        <div class="card-title">Trigger Ingestion</div>
+        
+        <div class="action-group">
+          <div class="action-label">Primary Ingestion</div>
+          <button class="btn btn-primary" id="btn-run-primary" onclick="triggerPrimaryFetch()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+            Run RemoteOK Fetch
+          </button>
+        </div>
+
+        <div class="action-group">
+          <div class="action-label">Sandbox Simulations</div>
+          <select class="select-dropdown" id="simulation-selector">
+            <option value="normal">Normal Run (Returns 3 valid jobs)</option>
+            <option value="malformed">Malformed (Skips invalid, parses 1)</option>
+            <option value="empty">Empty API Array (Returns 0 results)</option>
+            <option value="failure">Catastrophic API Outage (HTTP 403 error)</option>
+          </select>
+          <button class="btn" id="btn-run-simulation" onclick="triggerSimulation()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            Run Simulation
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Output Panel -->
+    <div class="main-content">
+      <!-- Cyber logs console -->
+      <div class="console-card">
+        <div class="console-header">
+          <span class="console-title">System Ingestion Logs</span>
+          <button class="console-clear-btn" onclick="clearConsole()">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            Clear Console
+          </button>
+        </div>
+        <div class="console-viewport" id="console-logs">
+          <!-- Log lines will append here dynamically -->
+          <div class="log-line"><span class="log-timestamp">--:--:--</span> <span class="log-level-info">[INFO]</span> <span class="log-message">Dashboard initialized. Awaiting user actions.</span></div>
+        </div>
+      </div>
+
+      <!-- Ingestion run history -->
+      <div class="card">
+        <div class="card-title">Pipeline Run History</div>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Started At</th>
+                <th>Source</th>
+                <th>Status</th>
+                <th>Metrics (Found / New / Dups)</th>
+                <th>Notes / Errors</th>
+              </tr>
+            </thead>
+            <tbody id="history-table-body">
+              <tr>
+                <td colspan="5" style="text-align: center; color: var(--text-muted);">No runs recorded in database.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Normalized Listings Grid -->
+      <div class="card">
+        <div class="listings-title-bar">
+          <div class="card-title" style="margin-bottom: 0;">Normalized Listings</div>
+          <span class="listings-count" id="listings-count-val">0 listings cached</span>
+        </div>
+        <div class="filter-bar" style="margin-top: 1rem; margin-bottom: 1.25rem;">
+          <input type="text" class="filter-input" id="search-filter" placeholder="Filter jobs by title, company, or tags..." oninput="applyClientFilter()">
+        </div>
+        
+        <div class="listings-list" id="jobs-container">
+          <!-- Job listings will load here -->
+          <div style="text-align: center; padding: 2rem; color: var(--text-muted);">No job listings retrieved yet.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State to hold jobs for client-side search filtering
+    let allCachedJobs = [];
+
+    // On Load
+    window.addEventListener('DOMContentLoaded', () => {
+      refreshAllStats();
+    });
+
+    // Helper to format ISO strings to localized clean timestamps (e.g. 23:03:44 18 Aug)
+    function formatTimestamp(isoString) {
+      if (!isoString) return '--';
+      const date = new Date(isoString);
+      if (isNaN(date.getTime())) return isoString;
+      
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      
+      const day = date.getDate();
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const month = months[date.getMonth()];
+      
+      return `${hours}:${minutes}:${seconds} ${day} ${month}`;
+    }
+
+    // Refresh everything
+    async function refreshAllStats() {
+      await Promise.all([
+        loadHealthStats(),
+        loadRunHistory(),
+        loadJobListings()
+      ]);
+    }
+
+    // Clear console terminal
+    function clearConsole() {
+      const consoleViewport = document.getElementById('console-logs');
+      consoleViewport.innerHTML = '<div class="log-line"><span class="log-timestamp">--:--:--</span> <span class="log-level-info">[INFO]</span> <span class="log-message">Console log cleared.</span></div>';
+    }
+
+    // Print logs to terminal
+    function appendLogs(logs) {
+      if (!Array.isArray(logs) || logs.length === 0) return;
+      const consoleViewport = document.getElementById('console-logs');
+      
+      logs.forEach(log => {
+        const timePart = log.timestamp ? log.timestamp.split('T')[1].slice(0, 8) : '--:--:--';
+        const levelClass = log.level === 'WARN' ? 'log-level-warn' : (log.level === 'ERROR' ? 'log-level-error' : 'log-level-info');
+        
+        const line = document.createElement('div');
+        line.className = 'log-line';
+        line.innerHTML = `<span class="log-timestamp">${timePart}</span> <span class="${levelClass}">[${log.level}]</span> <span class="log-message">${escapeHtml(log.message)}</span>`;
+        consoleViewport.appendChild(line);
+      });
+      
+      // Auto scroll to bottom
+      consoleViewport.scrollTop = consoleViewport.scrollHeight;
+    }
+
+    function escapeHtml(unsafe) {
+      return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // Fetch Source Health
+    async function loadHealthStats() {
+      try {
+        const response = await fetch('/api/health-stats');
+        const data = await response.json();
+        if (data.success) {
+          updateHealthUI('remoteok', data.sources.remoteok);
+          updateHealthUI('sandbox', data.sources.sandbox);
+        }
+      } catch (err) {
+        console.error('Failed to load health stats:', err);
+      }
+    }
+
+    function updateHealthUI(id, stats) {
+      const statusBadge = document.getElementById(`status-val-${id}`);
+      const successSpan = document.getElementById(`success-val-${id}`);
+      const failureSpan = document.getElementById(`failure-val-${id}`);
+      const errorsSpan = document.getElementById(`errors-val-${id}`);
+      const httpSpan = document.getElementById(`http-val-${id}`);
+      
+      // Reset statuses
+      statusBadge.className = 'health-status';
+      
+      if (!stats || stats.status === 'unknown') {
+        statusBadge.classList.add('status-unknown');
+        statusBadge.textContent = 'UNKNOWN';
+        successSpan.textContent = '--';
+        failureSpan.textContent = '--';
+        errorsSpan.textContent = '0';
+        httpSpan.textContent = '--';
+        return;
+      }
+
+      statusBadge.textContent = stats.status.toUpperCase();
+      if (stats.status === 'healthy') {
+        statusBadge.classList.add('status-healthy');
+      } else if (stats.status === 'degraded') {
+        statusBadge.classList.add('status-degraded');
+      } else {
+        statusBadge.classList.add('status-offline');
+      }
+
+      successSpan.textContent = formatTimestamp(stats.lastSuccess);
+      failureSpan.textContent = formatTimestamp(stats.lastFailure);
+      errorsSpan.textContent = stats.consecutiveErrors;
+      httpSpan.textContent = stats.lastHttpStatus || '--';
+    }
+
+    // Fetch Run History Table
+    async function loadRunHistory() {
+      try {
+        const response = await fetch('/status');
+        const data = await response.json();
+        if (data.success && Array.isArray(data.history)) {
+          const tbody = document.getElementById('history-table-body');
+          if (data.history.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No runs recorded in database.</td></tr>';
+            return;
+          }
+          
+          tbody.innerHTML = '';
+          data.history.forEach(run => {
+            const tr = document.createElement('tr');
+            
+            const startedAt = formatTimestamp(run.timestamp);
+            const sourceLabel = run.source === 'remoteok' ? 'primary' : run.source;
+            const badgeClass = run.status === 'success' ? 'badge-success' : 'badge-failed';
+            const metricsText = run.status === 'success' 
+              ? `Found: ${run.fetchedCount} | New: ${run.storedCount - run.erroredCount} | Dups: ${run.fetchedCount - run.storedCount}`
+              : 'Found: 0 | New: 0 | Dups: 0';
+            const notes = run.errorMessage ? run.errorMessage : (run.status === 'success' ? '--' : `Error code: ${run.httpStatus}`);
+
+            tr.innerHTML = `
+              <td>${startedAt}</td>
+              <td style="font-family: monospace;">${sourceLabel}</td>
+              <td><span class="status-badge ${badgeClass}">${run.status.toUpperCase()}</span></td>
+              <td>${metricsText}</td>
+              <td style="color: ${run.status === 'failed' ? 'var(--accent-red)' : 'inherit'}">${notes}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load run history:', err);
+      }
+    }
+
+    // Fetch Listings
+    async function loadJobListings() {
+      try {
+        const response = await fetch('/listings?limit=50');
+        const data = await response.json();
+        if (data.success && Array.isArray(data.listings)) {
+          allCachedJobs = data.listings;
+          document.getElementById('listings-count-val').textContent = `${data.count} listings cached`;
+          renderJobs(allCachedJobs);
+        }
+      } catch (err) {
+        console.error('Failed to load job listings:', err);
+      }
+    }
+
+    // Render Listings
+    function renderJobs(jobs) {
+      const container = document.getElementById('jobs-container');
+      if (jobs.length === 0) {
+        container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-muted);">No matching job listings found in cache.</div>';
+        return;
+      }
+
+      container.innerHTML = '';
+      jobs.forEach(job => {
+        const card = document.createElement('div');
+        card.className = 'job-card';
+        
+        // Tags badges
+        let tagsHtml = '';
+        if (Array.isArray(job.tags)) {
+          job.tags.slice(0, 4).forEach(tag => {
+            tagsHtml += `<span class="badge">${escapeHtml(tag)}</span>`;
+          });
+        }
+        
+        const jobDate = formatTimestamp(job.postedAt).split(' ')[1] + ' ' + formatTimestamp(job.postedAt).split(' ')[2];
+        const displaySource = job.source === 'remoteok' ? 'primary' : job.source;
+
+        card.innerHTML = `
+          <div class="job-main">
+            <div class="job-title-row">
+              <span class="job-title">${escapeHtml(job.title)}</span>
+            </div>
+            <div class="job-company">${escapeHtml(job.company)}</div>
+            <div class="job-description">${escapeHtml(job.description || 'No job description preview available.')}</div>
+            <div class="job-meta-row">
+              <span class="badge badge-source">${escapeHtml(displaySource)}</span>
+              ${job.location ? `<span class="badge badge-location">${escapeHtml(job.location)}</span>` : ''}
+              <span class="badge badge-date">${jobDate || '--'}</span>
+              ${tagsHtml}
+            </div>
+          </div>
+          <div class="job-action">
+            <a href="${job.url}" target="_blank" class="btn-view-job">View Listing &rarr;</a>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // Client side filtering
+    function applyClientFilter() {
+      const searchVal = document.getElementById('search-filter').value.toLowerCase().trim();
+      if (!searchVal) {
+        renderJobs(allCachedJobs);
+        return;
+      }
+
+      const filtered = allCachedJobs.filter(job => {
+        const titleMatch = job.title.toLowerCase().includes(searchVal);
+        const companyMatch = job.company.toLowerCase().includes(searchVal);
+        const tagsMatch = Array.isArray(job.tags) && job.tags.some(tag => tag.toLowerCase().includes(searchVal));
+        const sourceMatch = job.source.toLowerCase().includes(searchVal);
+        return titleMatch || companyMatch || tagsMatch || sourceMatch;
+      });
+
+      renderJobs(filtered);
+    }
+
+    // Action Triggers
+    async function triggerPrimaryFetch() {
+      const btn = document.getElementById('btn-run-primary');
+      const simBtn = document.getElementById('btn-run-simulation');
+      
+      btn.disabled = true;
+      simBtn.disabled = true;
+      
+      appendLogs([
+        { timestamp: new Date().toISOString(), level: 'INFO', message: 'Manual run initiated for primary source "remoteok"...' }
+      ]);
+
+      try {
+        const response = await fetch('/api/ingest', { method: 'POST' });
+        const data = await response.json();
+        
+        if (data.success && data.result) {
+          appendLogs(data.result.logs);
+        } else {
+          appendLogs([
+            { timestamp: new Date().toISOString(), level: 'ERROR', message: `Server failed to process ingestion: ${data.error || 'Unknown error'}` }
+          ]);
+        }
+      } catch (err) {
+        appendLogs([
+          { timestamp: new Date().toISOString(), level: 'ERROR', message: `Fetch request failed: ${err.message}` }
+        ]);
+      } finally {
+        btn.disabled = false;
+        simBtn.disabled = false;
+        await refreshAllStats();
+      }
+    }
+
+    async function triggerSimulation() {
+      const btn = document.getElementById('btn-run-primary');
+      const simBtn = document.getElementById('btn-run-simulation');
+      const scenario = document.getElementById('simulation-selector').value;
+      
+      btn.disabled = true;
+      simBtn.disabled = true;
+      
+      appendLogs([
+        { timestamp: new Date().toISOString(), level: 'INFO', message: `Sandbox simulation requested for scenario: "${scenario}"...` }
+      ]);
+
+      try {
+        const response = await fetch('/api/simulate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scenario })
+        });
+        const data = await response.json();
+        
+        if (data.success && data.result) {
+          appendLogs(data.result.logs);
+        } else {
+          appendLogs([
+            { timestamp: new Date().toISOString(), level: 'ERROR', message: `Server failed to run simulation: ${data.error || 'Unknown error'}` }
+          ]);
+        }
+      } catch (err) {
+        appendLogs([
+          { timestamp: new Date().toISOString(), level: 'ERROR', message: `Simulation trigger failed: ${err.message}` }
+        ]);
+      } finally {
+        btn.disabled = false;
+        simBtn.disabled = false;
+        await refreshAllStats();
+      }
+    }
+  </script>
+</body>
+</html>
